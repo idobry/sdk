@@ -46,7 +46,7 @@ library is useful per se.
 	graph.AddTarget(&target)
 	row1.Add(graph)
 	grafanaURL := "http://grafana.host"
-	c := sdk.NewClient(grafanaURL, "grafana-api-key", sdk.DefaultHTTPClient)
+	c := sdk.NewClient(grafanaURL, "grafana-api-key", nil, sdk.DefaultHTTPClient)
 	response, err := c.SetDashboard(context.TODO() ,*board, sdk.SetDashboardParams{
 		Overwrite: false,
 	})
