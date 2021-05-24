@@ -41,6 +41,7 @@ type Client struct {
 	key       string
 	basicAuth bool
 	client    *http.Client
+	customHeaders []string
 }
 
 // StatusMessage reflects status message as it returned by Grafana REST API.
@@ -58,7 +59,7 @@ type StatusMessage struct {
 // NewClient initializes client for interacting with an instance of Grafana server;
 // apiKeyOrBasicAuth accepts either 'username:password' basic authentication credentials,
 // or a Grafana API key
-func NewClient(apiURL, apiKeyOrBasicAuth string, client *http.Client) *Client {
+func NewClient(apiURL, apiKeyOrBasicAuth string, customHeaders []string, client *http.Client) *Client {
 	key := ""
 	basicAuth := strings.Contains(apiKeyOrBasicAuth, ":")
 	baseURL, _ := url.Parse(apiURL)
@@ -68,7 +69,7 @@ func NewClient(apiURL, apiKeyOrBasicAuth string, client *http.Client) *Client {
 		parts := strings.Split(apiKeyOrBasicAuth, ":")
 		baseURL.User = url.UserPassword(parts[0], parts[1])
 	}
-	return &Client{baseURL: baseURL.String(), basicAuth: basicAuth, key: key, client: client}
+	return &Client{baseURL: baseURL.String(), basicAuth: basicAuth, key: key, customHeaders: customHeaders, client: client}
 }
 
 func (r *Client) get(ctx context.Context, query string, params url.Values) ([]byte, int, error) {
@@ -102,12 +103,16 @@ func (r *Client) doRequest(ctx context.Context, method, query string, params url
 		return nil, 0, err
 	}
 	req = req.WithContext(ctx)
-	if !r.basicAuth {
+	if !r.basicAuth && len(r.customHeaders) == 0 {
 		req.Header.Set("Authorization", r.key)
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "autograf")
+	for _, h := range r.customHeaders {
+		parts := strings.Split(h, ":")
+		req.Header.Set(parts[0], parts[1])
+	}
 	resp, err := r.client.Do(req)
 	if err != nil {
 		return nil, 0, err
